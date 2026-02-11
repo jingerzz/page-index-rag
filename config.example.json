@@ -1,0 +1,9 @@
+{
+  "llm_backend": "ollama",
+  "ollama_base_url": "http://localhost:11434/v1",
+  "ollama_model": "mistral:7b",
+  "openrouter_api_key": "sk-or-v1-your-key-here",
+  "model": "google/gemini-2.5-flash",
+  "max_tokens": 16384,
+  "sec_user_agent": "Your Name (your.email@domain.com)"
+}

@@ -1,0 +1,24 @@
+{
+  "doc_id": "CAT_4_20260113_000110465926003277_3bd525cf",
+  "source_file": "CAT_4_20260113_000110465926003277.html",
+  "metadata": {},
+  "tree": {
+    "doc_name": "CAT_4_20260113_000110465926003277",
+    "structure": [
+      {
+        "title": "Table I - Non-Derivative Securities Acquired, Disposed of, or Beneficially Owned",
+        "node_id": "0000",
+        "text": "## Table I - Non-Derivative Securities Acquired, Disposed of, or Beneficially Owned\n1. Title of Security (Instr.\n      3) | 2. Transaction Date\n      (Month/Day/Year) | 2A. Deemed Execution Date, if any\n      (Month/Day/Year) | 3. Transaction Code (Instr.\n      8) | 4. Securities Acquired (A) or Disposed Of (D) (Instr.\n      3, 4 and 5) | 5.\n      Amount of Securities Beneficially Owned Following Reported Transaction(s) (Instr.\n      3 and 4) | 6. Ownership Form: Direct (D) or Indirect (I) (Instr.\n      4) | 7. Nature of Indirect Beneficial Ownership (Instr.\n      4)\nCode | V | Amount | (A) or (D) | Price\nCommon Stock | 01/12/2026 |  | F |  | 473 (1) | D | $ 621.97 | 43,350 (2) | D |",
+        "line_num": 29,
+        "summary": " The partial document provides details about non-derivative securities transactions, specifically common stock. It includes information such as the title of the security, transaction date, deemed execution date if applicable, transaction code, securities acquired or disposed of, amount of securities beneficially owned following the transaction, ownership form (direct or indirect), and nature of indirect beneficial ownership (if applicable). The example given shows a common stock transaction on 01/12/2026 with a price of $621.97 and 43,350 shares acquired in a direct ownership form."
+      },
+      {
+        "title": "Table II - Derivative Securities Acquired, Disposed of, or Beneficially Owned (e.g., puts, calls, warrants, options, convertible securities)",
+        "node_id": "0001",
+        "text": "## Table II - Derivative Securities Acquired, Disposed of, or Beneficially Owned (e.g., puts, calls, warrants, options, convertible securities)\n1. Title of Derivative Security (Instr.\n      3) | 2. Conversion or Exercise Price of Derivative Security | 3. Transaction Date\n      (Month/Day/Year) | 3A. Deemed Execution Date, if any\n      (Month/Day/Year) | 4. Transaction Code (Instr.\n      8) | 5.\n      Number of Derivative Securities Acquired (A) or Disposed of (D) (Instr.\n      3, 4 and 5) | 6. Date Exercisable and Expiration Date\n      (Month/Day/Year) | 7. Title and Amount of Securities Underlying Derivative Security (Instr.\n      3 and 4) | 8. Price of Derivative Security (Instr.\n      5) | 9.\n      Number of derivative Securities Beneficially Owned Following Reported Transaction(s) (Instr.\n      4) | 10. Ownership Form: Direct (D) or Indirect (I) (Instr.\n      4) | 11. Nature of Indirect Beneficial Ownership (Instr.\n      4)\nCode | V | (A) | (D) | Date Exercisable | Expiration Date | Title | Amount or Number of Shares\n\nExplanation of Responses:\n1. Represents shares withheld from the reporting person to satisfy tax obligation arising from the vesting of Restricted Stock Units granted January 12, 2024.\n2. Includes adjustment for dividends accrued.\n\n | /s/ Nicole Puza, POA for Denise Johnson | 01/13/2026\n | ** Signature of Reporting Person | Date\nReminder: Report on a separate line for each class of securities beneficially owned directly or indirectly.\n* If the form is filed by more than one reporting person, see Instruction\n                  4\n\n                  (b)(v).\n** Intentional misstatements or omissions of facts constitute Federal Criminal Violations See 18 U.S.C. 1001 and 15 U.S.C. 78ff(a).\nNote: File three copies of this Form, one of which must be manually signed. If space is insufficient, see Instruction 6 for procedure.\nPersons who respond to the collection of information contained in this form are not required to respond unless the form displays a currently valid OMB Number.",
+        "line_num": 43,
+        "summary": " The partial document provides details about derivative securities such as puts, calls, warrants, options, and convertible securities. It includes information like the title of the derivative security, conversion or exercise price, transaction date, transaction code, number of derivative securities acquired or disposed of, date exercisable and expiration date, title and amount of securities underlying the derivative security, price of the derivative security, number of derivative securities beneficially owned following a reported transaction, ownership form (direct or indirect), nature of indirect beneficial ownership, and any adjustments for dividends accrued. The document also includes a reminder to report each class of securities separately and mentions potential legal consequences for intentional misstatements or omissions of facts."
+      }
+    ]
+  }
+}

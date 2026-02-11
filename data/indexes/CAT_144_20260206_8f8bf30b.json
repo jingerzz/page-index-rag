@@ -1,0 +1,52 @@
+{
+  "doc_id": "CAT_144_20260206_8f8bf30b",
+  "source_file": "CAT_144_20260206.html",
+  "metadata": {},
+  "tree": {
+    "doc_name": "CAT_144_20260206",
+    "structure": [
+      {
+        "title": "144: Filer Information",
+        "node_id": "0000",
+        "text": "# 144: Filer Information\n\nFiler CIK | 0001839757\nFiler CCC | XXXXXXXX\nIs this a LIVE or TEST Filing? | LIVE TEST\nSubmission Contact Information\nName |\nPhone |\nE-Mail Address |",
+        "line_num": 3,
+        "summary": "# 144: Filer Information\n\nFiler CIK | 0001839757\nFiler CCC | XXXXXXXX\nIs this a LIVE or TEST Filing? | LIVE TEST\nSubmission Contact Information\nName |\nPhone |\nE-Mail Address |"
+      },
+      {
+        "title": "144: Issuer Information",
+        "node_id": "0001",
+        "text": "# 144: Issuer Information\n\nName of Issuer CATERPILLAR INC. SEC File Number 001-00768 Address of Issuer 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING TEXAS 75039 Phone (972) 891-7700 Name of Person for Whose Account the Securities are To Be Sold ANTHONY FASSINO See the definition of \"person\" in paragraph (a) of Rule 144. Information is to be given not only as to the person for whose account\n\t\t\t\t\t\tthe securities are to be sold but also as to all other persons included in that definition. In addition, information shall be given\n\t\t\t\t\t\tas to sales by all persons whose sales are required by paragraph (e) of Rule 144 to be aggregated with sales\n\t\t\t\t\t\tfor the account of the person filing this notice. Relationship to Issuer Officer",
+        "line_num": 13,
+        "summary": "# 144: Issuer Information\n\nName of Issuer CATERPILLAR INC. SEC File Number 001-00768 Address of Issuer 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING TEXAS 75039 Phone (972) 891-7700 Name of Person for Whose Account the Securities are To Be Sold ANTHONY FASSINO See the definition of \"person\" in paragraph (a) of Rule 144. Information is to be given not only as to the person for whose account\n\t\t\t\t\t\tthe securities are to be sold but also as to all other persons included in that definition. In addition, information shall be given\n\t\t\t\t\t\tas to sales by all persons whose sales are required by paragraph (e) of Rule 144 to be aggregated with sales\n\t\t\t\t\t\tfor the account of the person filing this notice. Relationship to Issuer Officer"
+      },
+      {
+        "title": "144: Securities Information",
+        "node_id": "0002",
+        "text": "# 144: Securities Information\n\nTitle of the Class of Securities To Be Sold Name and Address of the Broker Number of Shares or Other Units To Be Sold Aggregate Market Value Number of Shares or Other Units Outstanding Approximate Date of Sale Name the Securities Exchange Common Morgan Stanley Smith Barney LLC Executive Financial Services 1 New York Plaza 8th Floor New York\n\n\t\t\t\t\t\t\t\tNY\n\n\t\t\t\t\t\t\t\t10004 6033 4356711.64 467979596 02/06/2026 NYSE\n\nFurnish the following information with respect to the acquisition of the securities to be sold and with respect to the payment\n\t\t\t\tof all or any part of the purchase price or other consideration therefor:",
+        "line_num": 20,
+        "summary": "# 144: Securities Information\n\nTitle of the Class of Securities To Be Sold Name and Address of the Broker Number of Shares or Other Units To Be Sold Aggregate Market Value Number of Shares or Other Units Outstanding Approximate Date of Sale Name the Securities Exchange Common Morgan Stanley Smith Barney LLC Executive Financial Services 1 New York Plaza 8th Floor New York\n\n\t\t\t\t\t\t\t\tNY\n\n\t\t\t\t\t\t\t\t10004 6033 4356711.64 467979596 02/06/2026 NYSE\n\nFurnish the following information with respect to the acquisition of the securities to be sold and with respect to the payment\n\t\t\t\tof all or any part of the purchase price or other consideration therefor:"
+      },
+      {
+        "title": "144: Securities To Be Sold",
+        "node_id": "0003",
+        "text": "# 144: Securities To Be Sold\n\nTitle of the Class | Date you Acquired | Nature of Acquisition Transaction | Name of Person from Whom Acquired | Is this a Gift? | Date Donor Acquired | Amount of Securities Acquired | Date of Payment | Nature of Payment *\nCommon | 02/06/2026 | Stock Option Exercise | Issuer |  |  | 6033 | 02/06/2026 | Cash\n\n* If the securities were purchased and full payment therefor was not made in cash at the time of purchase, explain in the table or in a note\n\t\t\tthereto the nature of the consideration given. If the consideration consisted of any note or other obligation, or if payment was made\n\t\t\tin installments describe the arrangement and state when the note or other obligation was discharged in full or the last installment paid.\n\nFurnish the following information as to all securities of the issuer sold during the past 3 months by the person for whose account the securities are to be sold.",
+        "line_num": 31,
+        "summary": " The partial document provides details about a securities transaction involving Common stocks. Specifically, it mentions one instance of stock option exercise on February 6, 2026, where 6033 units were acquired from the issuer in cash. Additionally, it requests information about any securities sold by the person for whose account the stocks are being sold during the past 3 months."
+      },
+      {
+        "title": "144: Securities Sold During The Past 3 Months",
+        "node_id": "0004",
+        "text": "# 144: Securities Sold During The Past 3 Months\n\nName and Address of Seller Title of Securities Sold Date of Sale Amount of Securities Sold Gross Proceeds ANTHONY FASSINO 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING\n\n\t\t\t\t\t\tTX\n\n\t\t\t\t\t\t75039 Common 02/02/2026 10671 7261060.61 ANTHONY FASSINO 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING\n\n\t\t\t\t\t\tTX\n\n\t\t\t\t\t\t75039 Common 11/10/2025 8184 4666353.12",
+        "line_num": 42,
+        "summary": "# 144: Securities Sold During The Past 3 Months\n\nName and Address of Seller Title of Securities Sold Date of Sale Amount of Securities Sold Gross Proceeds ANTHONY FASSINO 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING\n\n\t\t\t\t\t\tTX\n\n\t\t\t\t\t\t75039 Common 02/02/2026 10671 7261060.61 ANTHONY FASSINO 5205 N. O'CONNOR BOULEVARD, SUITE 100 IRVING\n\n\t\t\t\t\t\tTX\n\n\t\t\t\t\t\t75039 Common 11/10/2025 8184 4666353.12"
+      },
+      {
+        "title": "144: Remarks and Signature",
+        "node_id": "0005",
+        "text": "# 144: Remarks and Signature\n\nRemarks Date of Notice 02/06/2026 ATTENTION: The person for whose account the securities to which this notice relates are to be sold hereby represents by signing\n\t\t\t\t\tthis notice that he does not know any material adverse information in regard to the current and prospective\n\t\t\t\t\toperations of the Issuer of the securities to be sold which has not been publicly disclosed. If such person has\n\t\t\t\t\tadopted a written trading plan or given trading instructions to satisfy Rule 10b5-1 under the Exchange Act, by\n\t\t\t\t\tsigning the form and indicating the date that the plan was adopted or the instruction given, that person makes\n\t\t\t\t\tsuch representation as of the plan adoption or instruction date. Signature /S/ Anthony D Fassino ATTENTION: Intentional misstatements or omission of facts constitute Federal Criminal Violations (See 18 U.S.C. 1001)",
+        "line_num": 54,
+        "summary": "# 144: Remarks and Signature\n\nRemarks Date of Notice 02/06/2026 ATTENTION: The person for whose account the securities to which this notice relates are to be sold hereby represents by signing\n\t\t\t\t\tthis notice that he does not know any material adverse information in regard to the current and prospective\n\t\t\t\t\toperations of the Issuer of the securities to be sold which has not been publicly disclosed. If such person has\n\t\t\t\t\tadopted a written trading plan or given trading instructions to satisfy Rule 10b5-1 under the Exchange Act, by\n\t\t\t\t\tsigning the form and indicating the date that the plan was adopted or the instruction given, that person makes\n\t\t\t\t\tsuch representation as of the plan adoption or instruction date. Signature /S/ Anthony D Fassino ATTENTION: Intentional misstatements or omission of facts constitute Federal Criminal Violations (See 18 U.S.C. 1001)"
+      }
+    ]
+  }
+}

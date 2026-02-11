@@ -1,0 +1,29 @@
+# API key and secrets — never commit
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+
+# Build / install
+*.egg-info/
+dist/
+build/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Project-specific
+logs/
+*.log
+data/drop/*.pdf
+data/drop/*.xlsx
+data/drop/*.xls
