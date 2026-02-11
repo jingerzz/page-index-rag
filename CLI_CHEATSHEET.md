@@ -55,7 +55,9 @@ uv run rag-server          # MCP server for Claude Desktop (optional)
 
 ## Claude Desktop
 
-Add to `claude_desktop_config.json`:
+**Full MCP setup (config paths, tools, troubleshooting):** see **README.md** → “Using with Claude Desktop (MCP)”.
+
+Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
 
 ```json
 {

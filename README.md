@@ -44,22 +44,53 @@ uv run pageindex-rag       # show help
 
 See **CLI_CHEATSHEET.md** for the full interactive flow and troubleshooting.
 
-## Claude Desktop
+## Using with Claude Desktop (MCP)
 
-Add to `claude_desktop_config.json`:
+After you’ve set up the project and indexed some documents (e.g. via `uv run fetch-sec` or `uv run ingest`), you can use the MCP server from **Claude Desktop** so Claude can list, search, and read your indexed filings.
+
+### 1. Config file location
+
+Edit the Claude Desktop MCP config (create the file if it doesn’t exist):
+
+| OS     | Path |
+|--------|------|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Linux   | `~/.config/Claude/claude_desktop_config.json` |
+
+### 2. Add the pageindex-rag MCP server
+
+Add this block (and keep any existing `mcpServers` entries). **Replace the directory path** with the full path to your `pageindex-rag` folder:
 
 ```json
 {
   "mcpServers": {
     "pageindex-rag": {
       "command": "uv",
-      "args": ["--directory", "C:/Users/jxie0/pageindex-rag", "run", "rag-server"]
+      "args": ["--directory", "/path/to/your/pageindex-rag", "run", "rag-server"]
     }
   }
 }
 ```
 
-MCP tools: `list_documents`, `search_documents`, `get_document_overview`, `get_document_section`, `ingest_drop_folder`, `remove_document`.
+- **Windows example:** `"C:/Users/YourName/pageindex-rag"`
+- **macOS/Linux example:** `"/Users/yourname/pageindex-rag"`
+- **Requirement:** `uv` must be on your PATH so Claude Desktop can run it. Install from [github.com/astral-sh/uv](https://github.com/astral-sh/uv) if needed.
+
+Restart Claude Desktop after changing the config.
+
+### 3. MCP tools available to Claude
+
+| Tool | Description |
+|------|-------------|
+| `list_documents` | List all indexed documents (name, doc_id, node count, description). |
+| `search_documents` | Keyword search across documents; optional `doc_id` to limit to one doc. |
+| `get_document_overview` | Table-of-contents overview of a document (by `doc_id`). |
+| `get_document_section` | Full text of a specific section/node (by `doc_id` and `node_id`). |
+| `ingest_drop_folder` | Index any supported files currently in `data/drop/`. |
+| `remove_document` | Remove an indexed document by `doc_id`. |
+
+In Claude you can say e.g. “List my documents”, “Search for risk factors in my 10-Ks”, “Give me the overview of document X”, or “Read section 0005 of document Y”.
 
 ## Technical Note
 

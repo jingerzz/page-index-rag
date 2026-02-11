@@ -1,5 +1,8 @@
 # API key and secrets — never commit
 config.json
+.env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
