@@ -1,97 +1,177 @@
-# pageindex-rag
+# PageIndex
 
-Interactive CLI for **SEC EDGAR filings (HTML)** → **PageIndex-style RAG**: hierarchy-faithful trees, keyword search, no vector database. Default LLM is **Mistral 7B via Ollama** for node summaries and doc descriptions; you can switch to Gemini 2.5 Flash (OpenRouter) in config. Tree structure is built from headings (no LLM for structure on HTML).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Built with uv](https://img.shields.io/badge/built%20with-uv-5A67D8)](https://github.com/astral-sh/uv)
 
-## How It Works
+**PageIndex — Vectorless structural indexing for reasoning-based RAG.**
 
-1. **Fetch** — Run `uv run fetch-sec` (or `uv run fetch-sec CAT`). Interactive prompts: SEC User-Agent (once) → ticker → form filter (e.g. 10-K,10-Q) → table of recent filings → select which to download (e.g. `1`, `1-5`, `all`). Selected filings are downloaded as **HTML only** to `data/drop/`.
-2. **Index** — When asked “Index these into the tree now?”, say **y** to build the tree (HTML → hierarchy-faithful Markdown → PageIndex `md_to_tree()`) and move files to `data/processed/`. Or say **n** and run `uv run ingest` later.
-3. **Search** — Use `uv run manage-docs` to list indexed filings (numbered list; delete by number) or connect Claude Desktop to the MCP server and search/browse sections by keyword.
+PageIndex is a research-grade indexing engine that builds a navigable, hierarchy-faithful map of long documents (table-of-contents + sections) so language models can reason over structure instead of relying on embedding similarity alone.
 
-SEC HTML is converted to Markdown that preserves heading levels (h1→#, h2→##, etc.), so the tree is built from structure with **no LLM calls for TOC/structure** — unlike the PDF path.
+---
 
-## Setup
+## Positioning
+
+### What this is
+
+PageIndex is the **core engine** in this repository. It:
+
+- ingests documents (especially SEC filing HTML),
+- preserves heading hierarchy,
+- builds a searchable section tree,
+- exposes retrieval tools through a CLI and MCP server.
+
+### Ecosystem architecture
+
+- **PageIndex (engine):** structural indexing + section-level retrieval.
+- **FidoSEC (CLI/use-case):** filing acquisition workflow on top of EDGAR.
+
+> **FidoSEC — AI Retriever for SEC Filings**  
+> FidoSEC fetches filings. PageIndex makes them navigable for reasoning.
+
+This repository currently contains both the engine and SEC-oriented commands. Over time, FidoSEC can remain here as a submodule/package or split into a dedicated companion repo.
+
+---
+
+## Why it is different
+
+Most RAG stacks start with chunking + vectors. PageIndex starts with **document structure**:
+
+- **Vectorless first:** no vector database required for baseline retrieval.
+- **Hierarchy-aware:** section boundaries and TOC relationships are preserved.
+- **Reasoning-friendly:** LLMs can traverse section maps (overview → section drill-down).
+- **Transparent retrieval:** results are explicit nodes, not opaque nearest neighbors.
+
+This is especially useful for regulatory filings where section context matters (Risk Factors, MD&A, Notes, exhibits, etc.).
+
+---
+
+## How it works
+
+```text
+SEC EDGAR HTML
+   ↓
+FidoSEC fetch workflow (fetch-sec)
+   ↓
+HTML → Markdown (heading levels preserved)
+   ↓
+PageIndex tree builder (md_to_tree)
+   ↓
+Node summaries + document description (LLM-assisted)
+   ↓
+CLI + MCP tools for overview, search, and section reads
+```
+
+### Retrieval model
+
+1. Build one canonical tree per filing.
+2. Search and browse over indexed nodes.
+3. Read exact sections on demand.
+4. Compose answers from grounded node text.
+
+---
+
+## Quickstart
 
 ```bash
 uv sync
 cp config.example.json config.json
 ```
 
-Edit `config.json`:
+Set in `config.json`:
 
-- **llm_backend** — `"ollama"` (default) or `"openrouter"`. With `ollama`, run Ollama and e.g. `ollama pull mistral:7b`.
-- **ollama_model** — Model name when using Ollama (default `mistral:7b`).
-- **openrouter_api_key** — Only needed when `llm_backend` is `openrouter`. From https://openrouter.ai/keys.
-- **sec_user_agent** — Your real name and email, e.g. `Your Name (your.email@domain.com)`. Required for SEC EDGAR; you’ll be prompted once by `fetch-sec` if missing.
+- `llm_backend`: `"ollama"` (default) or `"openrouter"`
+- `ollama_model`: default `mistral:7b`
+- `openrouter_api_key`: required only for `openrouter`
+- `sec_user_agent`: required for EDGAR access
 
-## Usage
-
-**Primary: interactive SEC fetch and index**
+### 1) Fetch filings (FidoSEC workflow)
 
 ```bash
-uv run fetch-sec           # prompts: ticker → form filter → table → select → Index now?
-uv run fetch-sec CAT       # ticker CAT, then form filter, table, selection
+uv run fetch-sec
+# or
+uv run fetch-sec CAT
 ```
 
-**Supporting commands**
+The CLI prompts for ticker/form filters and can immediately index selected filings.
+
+### 2) Index documents
 
 ```bash
-uv run ingest              # index any files in data/drop/ (e.g. if you skipped "Index now?")
-uv run manage-docs         # numbered list of filings; delete by number
-uv run rag-server          # start MCP server for Claude Desktop
-uv run pageindex-rag       # show help
+uv run ingest
 ```
 
-See **CLI_CHEATSHEET.md** for the full interactive flow and troubleshooting.
+Indexes files from `data/drop/` into PageIndex trees.
 
-## Using with Claude Desktop (MCP)
+### 3) Explore and retrieve
 
-After you’ve set up the project and indexed some documents (e.g. via `uv run fetch-sec` or `uv run ingest`), you can use the MCP server from **Claude Desktop** so Claude can list, search, and read your indexed filings.
+```bash
+uv run manage-docs   # list/remove indexed docs
+uv run rag-server    # MCP server for agentic clients
+```
 
-### 1. Config file location
+---
 
-Edit the Claude Desktop MCP config (create the file if it doesn’t exist):
+## MCP integration (Claude Desktop)
 
-| OS     | Path |
-|--------|------|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Linux   | `~/.config/Claude/claude_desktop_config.json` |
-
-### 2. Add the pageindex-rag MCP server
-
-Add this block (and keep any existing `mcpServers` entries). **Replace the directory path** with the full path to your `pageindex-rag` folder:
+Configure Claude Desktop MCP with:
 
 ```json
 {
   "mcpServers": {
     "pageindex-rag": {
       "command": "uv",
-      "args": ["--directory", "/path/to/your/pageindex-rag", "run", "rag-server"]
+      "args": ["--directory", "/path/to/page-index-rag", "run", "rag-server"]
     }
   }
 }
 ```
 
-- **Windows example:** `"C:/Users/YourName/pageindex-rag"`
-- **macOS/Linux example:** `"/Users/yourname/pageindex-rag"`
-- **Requirement:** `uv` must be on your PATH so Claude Desktop can run it. Install from [github.com/astral-sh/uv](https://github.com/astral-sh/uv) if needed.
+Then use tools such as:
 
-Restart Claude Desktop after changing the config.
+- `list_documents`
+- `search_documents`
+- `get_document_overview`
+- `get_document_section`
+- `ingest_drop_folder`
+- `remove_document`
 
-### 3. MCP tools available to Claude
+---
 
-| Tool | Description |
-|------|-------------|
-| `list_documents` | List all indexed documents (name, doc_id, node count, description). |
-| `search_documents` | Keyword search across documents; optional `doc_id` to limit to one doc. |
-| `get_document_overview` | Table-of-contents overview of a document (by `doc_id`). |
-| `get_document_section` | Full text of a specific section/node (by `doc_id` and `node_id`). |
-| `ingest_drop_folder` | Index any supported files currently in `data/drop/`. |
-| `remove_document` | Remove an indexed document by `doc_id`. |
+## Repository layout
 
-In Claude you can say e.g. “List my documents”, “Search for risk factors in my 10-Ks”, “Give me the overview of document X”, or “Read section 0005 of document Y”.
+```text
+src/pageindex/          # PageIndex engine primitives
+src/fetch_sec.py        # FidoSEC-style SEC fetch flow
+src/ingest.py           # indexing pipeline entrypoint
+src/server.py           # MCP server
+src/manage_docs.py      # document management CLI
+data/drop/              # raw files waiting for ingest
+data/processed/         # processed HTML/markdown assets
+data/indexes/           # built PageIndex outputs
+```
 
-## Technical Note
+---
 
-- **SEC HTML path:** HTML → `html_to_markdown()` (h1–h6 → #–######, document order preserved) → temp Markdown file → `md_to_tree()`. Tree structure comes from headings only; LLM is used only for per-node summaries and doc description. Best results with EDGAR primary HTML (what `fetch-sec` downloads). SEC sometimes serves XHTML/XML; we parse as HTML and suppress BeautifulSoup’s `XMLParsedAsHTMLWarning` so the console stays quiet.
+## OSS metadata
+
+- **License:** MIT (`LICENSE`)
+- **Contributing:** see `CONTRIBUTING.md`
+- **Citation:** see `CITATION.cff`
+- **Roadmap/docs scaffold:** see `docs/`
+
+### Suggested GitHub topics
+
+`rag`, `retrieval-augmented-generation`, `sec-filings`, `edgar`, `document-indexing`, `llm-infra`, `mcp`, `agent-tools`, `vectorless-rag`, `structural-retrieval`
+
+---
+
+## What is next
+
+- Formalize `PageIndex` as a standalone package API.
+- Decide final packaging boundary for `FidoSEC` (same repo vs companion repo).
+- Add benchmark tasks: structural retrieval vs vector retrieval on SEC QA.
+- Add reproducible eval harness for section-grounded answer quality.
+- Expand parser reliability across filing variants (HTML/XHTML edge cases).
+
+If you are building production or research workflows around filings, policy docs, or contracts, PageIndex is designed to be a clear and inspectable retrieval substrate.
