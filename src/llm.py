@@ -54,6 +54,12 @@ def _get_summary_token_threshold():
     val = cfg.get("summary_token_threshold")
     return int(val) if val else 200
 
+def _get_summary_backend():
+    """Backend for summary generation. Returns 'ollama' by default."""
+    cfg = _load_config()
+    return cfg.get("summary_backend", "ollama")
+
+
 
 @asynccontextmanager
 async def _maybe_semaphore(sem):
