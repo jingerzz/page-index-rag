@@ -1,10 +1,11 @@
-"""LLM client: Ollama (default, Mistral) or OpenRouter (Gemini). Uses OpenAI SDK with configurable base_url."""
+"""LLM client: Ollama-only via OpenAI SDK with configurable base_url."""
 
 import json
 import logging
 import os
 import time
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import openai
@@ -14,36 +15,14 @@ logger = logging.getLogger("pageindex-rag")
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config.json"
 
-_config_cache = None
-
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-
 
 def _load_config():
-    global _config_cache
-    if _config_cache is None:
-        if CONFIG_PATH.exists():
-            _config_cache = json.loads(CONFIG_PATH.read_text())
-        else:
-            _config_cache = {}
-    return _config_cache
-
-
-def _get_backend():
-    """Return 'ollama' or 'openrouter'. Default is ollama (Mistral)."""
-    cfg = _load_config()
-    return (cfg.get("llm_backend") or "ollama").lower().strip()
-
-
-def _get_api_key():
-    cfg = _load_config()
-    return cfg.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY") or ""
-
-
-def _get_model():
-    """Model name for the active backend. Ignored when backend is ollama (uses ollama_model)."""
-    cfg = _load_config()
-    return cfg.get("model", "google/gemini-2.5-flash")
+    if CONFIG_PATH.exists():
+        try:
+            return json.loads(CONFIG_PATH.read_text())
+        except Exception:
+            return {}
+    return {}
 
 
 def _get_ollama_base_url():
@@ -53,43 +32,56 @@ def _get_ollama_base_url():
 
 def _get_ollama_model():
     cfg = _load_config()
-    return cfg.get("ollama_model", "mistral:7b")
+    return cfg.get("ollama_model", "qwen3-coder:30b")
+
+
+def _get_summary_model():
+    """Model for summary generation."""
+    cfg = _load_config()
+    return cfg.get("summary_model") or _get_ollama_model()
+
+
+def _get_summary_concurrency():
+    """Max concurrent async summary LLM calls. Returns None if not configured (unlimited)."""
+    cfg = _load_config()
+    val = cfg.get("summary_concurrency")
+    return int(val) if val else None
+
+
+def _get_summary_token_threshold():
+    """Token count below which nodes skip LLM summarization. Defaults to 200."""
+    cfg = _load_config()
+    val = cfg.get("summary_token_threshold")
+    return int(val) if val else 200
+
+
+@asynccontextmanager
+async def _maybe_semaphore(sem):
+    """Async context manager that acquires sem if provided, otherwise is a no-op."""
+    if sem is not None:
+        async with sem:
+            yield
+    else:
+        yield
 
 
 def _resolve_model_and_client():
-    """Return (sync_client, model) for the configured backend."""
-    backend = _get_backend()
-    if backend == "ollama":
-        base = _get_ollama_base_url()
-        model = _get_ollama_model()
-        client = openai.OpenAI(base_url=base, api_key="ollama")
-        return client, model
-    # openrouter
-    api_key = _get_api_key()
-    model = _get_model()
-    client = openai.OpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL)
+    """Return (sync_client, model) for Ollama."""
+    base = _get_ollama_base_url()
+    model = _get_ollama_model()
+    client = openai.OpenAI(base_url=base, api_key="ollama")
     return client, model
 
 
 def _resolve_model_and_client_async():
-    """Return (async_client, model) for the configured backend."""
-    backend = _get_backend()
-    if backend == "ollama":
-        base = _get_ollama_base_url()
-        model = _get_ollama_model()
-        return openai.AsyncOpenAI(base_url=base, api_key="ollama"), model
-    api_key = _get_api_key()
-    model = _get_model()
-    return openai.AsyncOpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL), model
+    """Return (async_client, model) for Ollama."""
+    base = _get_ollama_base_url()
+    model = _get_ollama_model()
+    return openai.AsyncOpenAI(base_url=base, api_key="ollama"), model
 
 
 def _get_max_tokens():
-    """Max tokens per completion. 16384 gives headroom for large PDF TOC JSON extraction.
-
-    OpenRouter pre-checks affordability against this ceiling but only charges actual
-    tokens generated, so a higher default costs nothing extra for short responses
-    (summaries, yes/no checks, etc.).
-    """
+    """Max tokens per completion. 16384 gives headroom for large PDF TOC JSON extraction."""
     cfg = _load_config()
     return int(cfg.get("max_tokens", 16384))
 
@@ -147,7 +139,6 @@ def llm_call_with_finish_reason(model=None, prompt="", api_key=None, chat_histor
                 max_tokens=_get_max_tokens(),
             )
             finish_reason = response.choices[0].finish_reason
-            # Normalize: OpenRouter/Gemini may return "length" or "max_tokens"
             if finish_reason in ("length", "max_tokens"):
                 return response.choices[0].message.content, "max_output_reached"
             else:
@@ -161,27 +152,33 @@ def llm_call_with_finish_reason(model=None, prompt="", api_key=None, chat_histor
                 return "Error", "error"
 
 
-async def llm_call_async(model=None, prompt="", api_key=None):
-    """Async LLM call. Drop-in replacement for ChatGPT_API_async."""
+async def llm_call_async(model=None, prompt="", api_key=None, semaphore=None):
+    """Async LLM call. Drop-in replacement for ChatGPT_API_async.
+
+    semaphore: optional asyncio.Semaphore to limit concurrency. The semaphore
+    is held for the entire duration of the call (including retries) so that at
+    most N calls are in-flight at once.
+    """
     max_retries = 10
     async_client, resolved_model = _resolve_model_and_client_async()
     if model is not None:
         resolved_model = model
     messages = [{"role": "user", "content": prompt}]
 
-    for i in range(max_retries):
-        try:
-            response = await async_client.chat.completions.create(
-                model=resolved_model,
-                messages=messages,
-                temperature=0,
-                max_tokens=_get_max_tokens(),
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"Async LLM call error (attempt {i+1}): {e}")
-            if i < max_retries - 1:
-                await asyncio.sleep(1)
-            else:
-                logger.error(f"Max retries reached for prompt: {prompt[:100]}...")
-                return "Error"
+    async with _maybe_semaphore(semaphore):
+        for i in range(max_retries):
+            try:
+                response = await async_client.chat.completions.create(
+                    model=resolved_model,
+                    messages=messages,
+                    temperature=0,
+                    max_tokens=_get_max_tokens(),
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                logger.error(f"Async LLM call error (attempt {i+1}): {e}")
+                if i < max_retries - 1:
+                    await asyncio.sleep(1)
+                else:
+                    logger.error(f"Max retries reached for prompt: {prompt[:100]}...")
+                    return "Error"

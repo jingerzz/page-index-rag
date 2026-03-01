@@ -14,7 +14,7 @@ Available commands:
   uv run rag-server    Start the MCP server (stdio transport for Claude Desktop)
 
 Workflow:
-  1. Copy config.example.json to config.json. Default LLM is Ollama (run Ollama, e.g. ollama pull mistral:7b). For Gemini set llm_backend to openrouter and add openrouter_api_key.
+  1. Copy config.example.json to config.json. Requires Ollama running locally (default model: qwen3-coder:30b).
   2. For SEC filings: run 'uv run fetch-sec' or 'uv run fetch-sec TICKER' (interactive; HTML only). Other files: drop into data/drop/
   3. Run 'uv run ingest' to build tree indexes
   4. Run 'uv run rag-server' or configure Claude Desktop to use the MCP server

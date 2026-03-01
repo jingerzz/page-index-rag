@@ -1,9 +1,11 @@
 {
-  "llm_backend": "ollama",
   "ollama_base_url": "http://localhost:11434/v1",
-  "ollama_model": "mistral:7b",
-  "openrouter_api_key": "sk-or-v1-your-key-here",
-  "model": "google/gemini-2.5-flash",
+  "ollama_model": "qwen3-coder:30b",
   "max_tokens": 16384,
-  "sec_user_agent": "Your Name (your.email@domain.com)"
+  "sec_user_agent": "Your Name (your.email@domain.com)",
+  "semantic_search": true,
+  "embedding_model": "nomic-embed-text",
+  "summary_model": "gemma3:4b",
+  "summary_concurrency": 50,
+  "summary_token_threshold": 5000
 }
