@@ -7,12 +7,39 @@ You have access to a PageIndex RAG MCP server that lets you fetch, index, search
 
 ## How to Think About This Tool
 
-PageIndex RAG preserves the **hierarchical structure** of SEC filings (Parts, Items, sub-sections, tables) and lets you navigate them like a table of contents. Unlike vector-based RAG, every result is an explicit document node with a known location in the filing — making answers traceable and citable.
+PageIndex RAG implements a **vectorless, reasoning-based RAG** approach inspired by the [PageIndex framework](https://pageindex.ai). Instead of relying on embeddings and vector similarity, it uses:
+
+1. **Hierarchical tree structure** — Document sections organized like a table of contents
+2. **LLM reasoning** — When keyword search is insufficient, the LLM navigates the tree to find relevant sections
+3. **Raw text retrieval** — Answers always come from full section text, never from summaries
+
+This approach achieved **98.7% accuracy on FinanceBench**, outperforming traditional vector-based RAG for financial document analysis.
+
+### PageIndex Philosophy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  REASONING PHASE (uses summaries for navigation)            │
+│  ├── LLM reads tree structure with section summaries        │
+│  ├── Decides which node_ids are relevant                    │
+│  └── Returns selected node_ids                              │
+│                                                             │
+│  RETRIEVAL PHASE (uses raw text for answers)                │
+│  ├── Fetch full raw text for selected node_ids              │
+│  └── Use raw text to answer the question                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Principles:**
+- **Summaries = Navigation aid only** — Help the LLM decide where to look
+- **Keyword search = Fast baseline** — Instant retrieval for clear matches
+- **LLM reasoning = Fallback** — When keywords are weak, LLM navigates the tree
+- **Raw text = Always the answer source** — Never use summaries for final answers
 
 **What you can do:**
 - Fetch any SEC filing for any public company (10-K, 10-Q, 8-K, proxy statements, ownership forms, etc.)
-- Search across filings by keyword with relevance scoring
-- Read specific sections in full
+- Search across filings by keyword with optional LLM reasoning fallback
+- Read specific sections in full (always raw text)
 - Compare filings year-over-year or across companies
 - Ask the same question across multiple filings at once
 
@@ -36,9 +63,9 @@ PageIndex RAG preserves the **hierarchical structure** of SEC filings (Parts, It
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
-| `search_with_citations(query, doc_id, max_results)` | Search with full source citations | Primary search tool. Returns doc_id + node_id pairs for follow-up reads. |
+| `search_with_citations(query, doc_id, max_results)` | **PageIndex reasoning-based search** with full source citations | Primary search tool. Uses keyword search first; invokes LLM reasoning when needed. Returns doc_id + node_id pairs. |
 | `get_document_overview(doc_id)` | Table of contents for a document | First step after indexing — understand the filing's structure before drilling in. |
-| `get_document_section(doc_id, node_id)` | Full text of a specific section | After search identifies a relevant section, read the full content for analysis. |
+| `get_document_section(doc_id, node_id)` | **Full raw text** of a specific section | After search identifies a relevant section, read the **complete raw text** for analysis. Never returns summaries as answers. |
 
 ### Analysis Tools
 
@@ -46,17 +73,53 @@ PageIndex RAG preserves the **hierarchical structure** of SEC filings (Parts, It
 |------|---------|-------------|
 | `batch_query(query, doc_ids)` | Same question across multiple documents | Tracking a topic across quarters, or comparing how multiple companies discuss the same issue. |
 
-### Embedding Tools
+### Embedding Tools (Optional)
+
+> **Note:** This implementation uses a **vectorless** approach by default (`semantic_search: false`). Embeddings are optional and disabled by default.
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
-| `embed_documents(doc_ids)` | Generate semantic search embeddings | Backfill embeddings for documents indexed before semantic search was enabled. New documents get embeddings automatically. |
+| `embed_documents(doc_ids)` | Generate semantic search embeddings | Only if you explicitly enable `semantic_search: true` in config. Not needed for the PageIndex reasoning-based approach. |
 
 ### Utility Tools
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `list_documents()` | List all indexed documents | When you need to see what's available, find doc_ids, or help the user choose a filing. Shows `[semantic]` tag for documents with embeddings. |
+
+---
+
+## PageIndex Retrieval Methodology
+
+### How Search Works
+
+The `search_with_citations()` tool implements the PageIndex two-stage retrieval:
+
+**Stage 1: Keyword Search (Fast Baseline)**
+- Scans all nodes for query term matches
+- Scoring: Title match (5 pts) + Summary match (3 pts) + Text match (1 pt)
+- If top score ≥ 3: Return keyword results directly (reasoning not needed)
+
+**Stage 2: LLM Reasoning (When Keywords Weak)**
+- Triggered when top keyword score < 3
+- LLM receives condensed tree structure (titles + summaries)
+- LLM selects most relevant node_ids based on query intent
+- Returns reasoning-selected nodes + keyword fallback
+
+### Why This Matters for Financial Documents
+
+| Approach | Problem | PageIndex Solution |
+|----------|---------|-------------------|
+| Vector similarity | "climate risk" ≠ "environmental impact" | LLM reasoning understands semantic equivalence |
+| Chunking | Loses section boundaries | Preserves hierarchical structure (Items, Parts) |
+| Summary answers | Misses precise figures/legal text | Always returns raw text for verification |
+
+### Retrieval Guarantees
+
+- ✅ **No vector database required** — Pure tree navigation
+- ✅ **Traceable sources** — Every result has doc_id + node_id
+- ✅ **Raw text answers** — Summaries never used for final answers
+- ✅ **Structure-aware** — Understands SEC filing organization (Items, Parts, Tables)
 
 ---
 
@@ -97,9 +160,15 @@ Step 7: Synthesize and present findings
 ```
 
 **IMPORTANT: The fetch → poll → analyze pattern avoids MCP timeouts.**
-`fetch_company_filings` returns in ~5-15 seconds (download only).
-Indexing happens in the background. Poll `check_indexing_status` every
-10-15 seconds until complete, then proceed with analysis.
+`fetch_company_filings` returns in ~1-3 seconds (download only).
+Indexing happens in the background (5-30 seconds depending on document size
+and summary settings). Poll `check_indexing_status` every 5 seconds until 
+complete, then proceed with analysis.
+
+**Indexing Speed:**
+- `summary_token_threshold: 5000` → ~0.5-2s (minimal LLM summaries)
+- `summary_token_threshold: 1000` → ~10-30s (more summaries for navigation)
+- No embeddings generated (vectorless approach)
 
 ### Recipe 2: Year-over-Year Comparison
 

@@ -51,17 +51,44 @@ def _element_text(tag: Tag) -> str:
     return tag.get_text(" ", strip=True)
 
 
-def _table_to_text(table: Tag) -> str:
-    """Convert a table to simple line-based text (one row per line, cells separated)."""
+def _table_to_text(table: Tag, out: list[str] | None = None) -> str:
+    """Convert a table to simple line-based text (one row per line, cells separated).
+    
+    If out is provided, table headers matching SEC patterns are emitted as markdown
+    headings before the table content.
+    """
     rows = []
+    header_emitted = False
+    
     for tr in table.find_all("tr"):
+        # Check for header row with SEC-style patterns
+        th_cells = tr.find_all("th")
+        if th_cells and out is not None and not header_emitted:
+            header_text = " ".join(th.get_text(" ", strip=True) for th in th_cells)
+            # Check if this looks like a SEC table header (Table I, Section 1, etc.)
+            if _SEC_HEADING_PATTERN.match(header_text) or len(header_text) < 100:
+                # Also check for common SEC table headers
+                lower_text = header_text.lower()
+                if any(keyword in lower_text for keyword in [
+                    "table", "section", "non-derivative", "derivative", 
+                    "securities", "beneficially owned", "title of security"
+                ]):
+                    out.append(f"## {header_text}\n")
+                    header_emitted = True
+                    continue  # Skip emitting this row in table body
+        
         cells = [td.get_text(" ", strip=True) for td in tr.find_all(["td", "th"])]
-        rows.append(" | ".join(cells))
+        if cells and any(c.strip() for c in cells):  # Skip empty rows
+            rows.append(" | ".join(cells))
+    
     return "\n".join(rows) if rows else ""
 
 
-def _walk(soup: Tag, out: list[str]) -> None:
-    """Recursively walk the DOM and append markdown lines to out (preserves order)."""
+def _walk(soup: Tag, out: list[str], state: dict | None = None) -> None:
+    """Recursively walk the DOM and append markdown lines to out (preserves order).
+
+    state["has_headings"] is set True when a real h1–h6 tag is found.
+    """
     for child in soup.children:
         if isinstance(child, NavigableString):
             continue
@@ -74,19 +101,21 @@ def _walk(soup: Tag, out: list[str]) -> None:
             text = _element_text(child)
             if text:
                 out.append(f"{prefix} {text}\n")
+                if state is not None:
+                    state["has_headings"] = True
         elif name == "table":
-            text = _table_to_text(child)
+            text = _table_to_text(child, out)
             if text:
                 out.append(text + "\n")
         elif name in _BLOCK_TAGS:
             if _has_block_or_heading_children(child):
-                _walk(child, out)
+                _walk(child, out, state)
             else:
                 text = _element_text(child)
                 if text:
                     out.append(text + "\n")
         else:
-            _walk(child, out)
+            _walk(child, out, state)
 
 
 def html_to_markdown(html_input: str | Path) -> str:
@@ -113,20 +142,23 @@ def html_to_markdown(html_input: str | Path) -> str:
 
     soup = BeautifulSoup(html, "lxml")
 
-    # Remove script and style (same as parse_html)
+    # Remove script, style, and hidden elements (iXBRL metadata uses display:none)
     for tag in soup(["script", "style"]):
+        tag.decompose()
+    for tag in soup.find_all(style=re.compile(r"display\s*:\s*none", re.IGNORECASE)):
         tag.decompose()
 
     body = soup.find("body") or soup
     out: list[str] = []
-    _walk(body, out)
+    state: dict = {"has_headings": False}
+    _walk(body, out, state)
 
     # Join and normalize: ensure blank line between sections, no excessive newlines
     md = "\n".join(line.rstrip() for line in "\n".join(out).splitlines())
     md = md.strip() + "\n" if md.strip() else ""
 
-    # Fallback: if no markdown headings (h1–h6 produced nothing), promote SEC Item/Part lines to ##
-    if md and not any(line.strip().startswith("#") for line in md.splitlines()):
+    # Fallback: if no real h1–h6 tags were found, promote SEC Item/Part lines to ##
+    if md and not state["has_headings"]:
         lines = md.splitlines()
         promoted = []
         for line in lines:

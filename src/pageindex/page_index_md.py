@@ -1,22 +1,38 @@
 import asyncio
 import json
+import logging
 import re
 import os
 from .utils import *
 
+logger = logging.getLogger("pageindex-rag")
 
-async def get_node_summary(node, summary_token_threshold=200, model=None):
+
+async def get_node_summary(node, summary_token_threshold=200, model=None, semaphore=None):
     node_text = node.get('text')
     num_tokens = count_tokens(node_text, model=model)
-    if num_tokens < summary_token_threshold:
+    skip = num_tokens < summary_token_threshold
+    if not skip:
+        logger.warning(
+            "DIAG LLM_CALL: title=%r tokens=%d threshold=%d",
+            node.get('title', '')[:60], num_tokens, summary_token_threshold
+        )
+    if skip:
         return node_text
     else:
-        return await generate_node_summary(node, model=model)
+        return await generate_node_summary(node, model=model, semaphore=semaphore)
 
 
 async def generate_summaries_for_structure_md(structure, summary_token_threshold, model=None):
+    from ..llm import _get_summary_model, _get_summary_concurrency
+    summary_model = model if model is not None else _get_summary_model()
+    concurrency = _get_summary_concurrency()
+    semaphore = asyncio.Semaphore(concurrency) if concurrency else None
+    logger.warning("DIAG generate_summaries: threshold=%d concurrency=%s model=%s",
+                   summary_token_threshold, concurrency, summary_model)
+
     nodes = structure_to_list(structure)
-    tasks = [get_node_summary(node, summary_token_threshold=summary_token_threshold, model=model) for node in nodes]
+    tasks = [get_node_summary(node, summary_token_threshold=summary_token_threshold, model=summary_model, semaphore=semaphore) for node in nodes]
     summaries = await asyncio.gather(*tasks)
 
     for node, summary in zip(nodes, summaries):

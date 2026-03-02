@@ -1,6 +1,7 @@
-"""Orchestrator: parse -> tree build -> store."""
+"""Orchestrator: parse -> tree build -> embed -> store."""
 
 import asyncio
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -9,6 +10,37 @@ from .pageindex import page_index, md_to_tree
 from .parsers import parse_file
 from .parsers.html_to_markdown import html_to_markdown
 from . import tree_store
+from .llm import _get_summary_token_threshold
+
+logger = logging.getLogger("pageindex-rag")
+
+
+def _generate_embeddings_if_enabled(tree_data: dict) -> dict[str, list[float]] | None:
+    """Generate node embeddings if semantic search is enabled.
+
+    Returns embeddings dict or None if disabled/unavailable.
+    """
+    try:
+        from . import embeddings
+    except ImportError:
+        return None
+
+    if not embeddings.is_enabled():
+        logger.info("Semantic search disabled in config, skipping embeddings")
+        return None
+
+    structure = tree_data.get("structure", [])
+    if not structure:
+        return None
+
+    try:
+        result = embeddings.generate_node_embeddings(structure)
+        if result:
+            logger.info(f"Generated {len(result)} node embeddings")
+        return result or None
+    except Exception as e:
+        logger.warning(f"Embedding generation failed (non-fatal): {e}")
+        return None
 
 
 def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
@@ -17,8 +49,11 @@ def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
     Routes by file type:
       - .pdf -> PageIndex page_index() (TOC detection, page-based tree)
       - .md/.markdown -> PageIndex md_to_tree()
-      - .html/.htm -> hierarchy-faithful HTML→Markdown, then md_to_tree() (no flat wrap)
+      - .html/.htm -> hierarchy-faithful HTML->Markdown, then md_to_tree()
       - Everything else -> parse to text, wrap as markdown, feed to md_to_tree()
+
+    If semantic search is enabled, generates embeddings for all nodes
+    and stores them alongside the tree data.
     """
     filepath = Path(filepath)
     suffix = filepath.suffix.lower()
@@ -31,12 +66,11 @@ def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
         tree_data = asyncio.run(md_to_tree(
             str(filepath),
             if_add_node_summary="yes",
-            summary_token_threshold=200,
+            summary_token_threshold=_get_summary_token_threshold(),
             if_add_node_text="yes",
             if_add_doc_description="no",
         ))
     elif suffix in (".html", ".htm"):
-        # Hierarchy-faithful HTML → Markdown, then md_to_tree() (SEC EDGAR, etc.)
         markdown_str = html_to_markdown(filepath)
         tmp_dir = tempfile.mkdtemp()
         tmp_md = Path(tmp_dir) / f"{filepath.stem}.md"
@@ -45,7 +79,7 @@ def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
             tree_data = asyncio.run(md_to_tree(
                 str(tmp_md),
                 if_add_node_summary="yes",
-                summary_token_threshold=200,
+                summary_token_threshold=_get_summary_token_threshold(),
                 if_add_node_text="yes",
                 if_add_doc_description="no",
             ))
@@ -56,11 +90,9 @@ def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
             except OSError:
                 pass
     else:
-        # Parse to text via parsers, wrap as markdown, feed to md_to_tree
         text, parse_meta = parse_file(filepath)
         meta.update(parse_meta)
 
-        # Write text as a temporary markdown file with a single heading
         tmp_dir = tempfile.mkdtemp()
         tmp_md = Path(tmp_dir) / f"{filepath.stem}.md"
         md_content = f"# {filepath.stem}\n\n{text}"
@@ -70,17 +102,18 @@ def index_document(filepath: str | Path, metadata: dict | None = None) -> str:
             tree_data = asyncio.run(md_to_tree(
                 str(tmp_md),
                 if_add_node_summary="yes",
-                summary_token_threshold=200,
+                summary_token_threshold=_get_summary_token_threshold(),
                 if_add_node_text="yes",
                 if_add_doc_description="no",
             ))
         finally:
-            # Clean up temp file
             tmp_md.unlink(missing_ok=True)
             try:
                 os.rmdir(tmp_dir)
             except OSError:
                 pass
 
-    doc_id = tree_store.save_tree(source_file, tree_data, meta)
+    node_embeddings = _generate_embeddings_if_enabled(tree_data)
+
+    doc_id = tree_store.save_tree(source_file, tree_data, meta, embeddings=node_embeddings)
     return doc_id

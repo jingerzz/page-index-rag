@@ -173,10 +173,14 @@ def _run_batch_indexing(batch_id: str):
 
 @mcp.tool()
 def get_document_section(doc_id: str, node_id: str) -> str:
-    """Get the full text of a specific section/node in a document.
+    """Get the FULL RAW TEXT of a specific section/node in a document.
 
     USE WHEN: You found a relevant section via search or overview and need
-    the complete text for analysis. This returns the entire section content.
+    the COMPLETE TEXT for analysis. This always returns the full raw content,
+    never just summaries.
+
+    IMPORTANT: This implements the PageIndex philosophy - summaries are used
+    for NAVIGATION ONLY, but answers must come from RAW TEXT for accuracy.
 
     Args:
         doc_id: The document ID (e.g. "CAT_10-K_20240216_d03268e6").
@@ -185,7 +189,7 @@ def get_document_section(doc_id: str, node_id: str) -> str:
                  Get this from get_document_overview() or search results.
 
     Returns:
-        Section title, summary (if available), and full text content.
+        Section title and FULL RAW TEXT content. Summary shown only as context.
 
     Example:
         get_document_section("CAT_10-K_20240216_d03268e6", "0015")
@@ -220,10 +224,15 @@ def get_document_section(doc_id: str, node_id: str) -> str:
     summary = node.get("summary", node.get("prefix_summary", ""))
 
     parts = [f"# {title}"]
-    if summary:
-        parts.append(f"\n**Summary:** {summary}")
+    
+    # Show summary only as context (PageIndex: summaries for navigation only)
+    if summary and summary != text:
+        parts.append(f"\n> **Navigation Summary:** {summary[:200]}...")
+        parts.append("> (Summary helps find sections; answers must come from full text below)")
+    
+    # ALWAYS return full raw text (PageIndex principle)
     if text:
-        parts.append(f"\n{text}")
+        parts.append(f"\n---\n\n{text}")
     else:
         parts.append("\n(No text content available for this node)")
 
@@ -259,14 +268,19 @@ def get_document_overview(doc_id: str) -> str:
 
 @mcp.tool()
 def search_with_citations(query: str, doc_id: str = "", max_results: int = 5) -> str:
-    """Search documents and return results with full citation information.
+    """Search documents using PageIndex reasoning-based retrieval.
 
     USE WHEN: The user needs verifiable references, you plan to cite sources,
     or you need precise doc_id + node_id pairs for follow-up reads.
     This is the primary search tool for all analysis workflows.
 
-    Each result includes: source document ID, node ID, node path, relevance
-    score, and text excerpt — everything needed to cite and verify.
+    SEARCH METHOD:
+    1. Keyword search runs first (fast baseline)
+    2. If results are weak, LLM reasoning navigates the document tree
+    3. Returns most relevant sections based on structure + content
+
+    This is a VECTORLESS approach - no embeddings, no vector DB.
+    Follows the PageIndex framework (98.7% accuracy on FinanceBench).
 
     Args:
         query: Search query using key terms (e.g. "revenue segment breakdown",
@@ -283,7 +297,7 @@ def search_with_citations(query: str, doc_id: str = "", max_results: int = 5) ->
         search_with_citations("supply chain risks")
         search_with_citations("revenue by geography", doc_id="AAPL_10-K_20241101_abc123")
     """
-    results = tree_search.search_trees(query, max_results=max_results, doc_id=doc_id or None)
+    results = tree_search.search_trees(query, max_results=max_results, doc_id=doc_id or None, use_reasoning=True)
     if not results:
         return "No matching results found."
 

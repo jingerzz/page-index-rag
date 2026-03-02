@@ -1,9 +1,25 @@
-"""JSON file-based storage for indexed document trees."""
+"""JSON file-based storage for indexed document trees and embeddings.
+
+Each document is stored as a single JSON file in data/indexes/ with the structure:
+{
+    "doc_id": "...",
+    "source_file": "...",
+    "metadata": {...},
+    "tree": { "doc_name": "...", "structure": [...] },
+    "embeddings": { "node_id": [float, ...], ... }  // optional
+}
+
+Embeddings are stored alongside the tree so no separate vector DB is needed.
+They add ~50-200KB per document depending on node count.
+"""
 
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
+
+logger = logging.getLogger("pageindex-rag")
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEXES_DIR = ROOT / "data" / "indexes"
@@ -23,8 +39,20 @@ def _make_doc_id(source_file: str) -> str:
     return f"{_sanitize(stem)}_{h}"
 
 
-def save_tree(source_file: str, tree_data: dict, metadata: dict | None = None) -> str:
-    """Save a tree to disk. Returns doc_id."""
+def save_tree(
+    source_file: str,
+    tree_data: dict,
+    metadata: dict | None = None,
+    embeddings: dict[str, list[float]] | None = None,
+) -> str:
+    """Save a tree to disk. Returns doc_id.
+
+    Args:
+        source_file: Original filename.
+        tree_data: The tree structure dict.
+        metadata: Optional metadata dict.
+        embeddings: Optional dict mapping node_id -> embedding vector.
+    """
     INDEXES_DIR.mkdir(parents=True, exist_ok=True)
     doc_id = _make_doc_id(source_file)
     record = {
@@ -33,13 +61,57 @@ def save_tree(source_file: str, tree_data: dict, metadata: dict | None = None) -
         "metadata": metadata or {},
         "tree": tree_data,
     }
+    if embeddings:
+        record["embeddings"] = embeddings
+
     path = INDEXES_DIR / f"{doc_id}.json"
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
     return doc_id
 
 
+def save_embeddings(doc_id: str, embeddings: dict[str, list[float]]) -> bool:
+    """Add or update embeddings for an existing document.
+
+    This loads the document, adds/replaces the embeddings key, and saves.
+    Useful for adding embeddings to documents that were indexed before
+    semantic search was enabled.
+
+    Args:
+        doc_id: The document ID.
+        embeddings: Dict mapping node_id -> embedding vector.
+
+    Returns:
+        True if successful, False if document not found.
+    """
+    path = INDEXES_DIR / f"{doc_id}.json"
+    if not path.exists():
+        return False
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["embeddings"] = embeddings
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save embeddings for {doc_id}: {e}")
+        return False
+
+
+def has_embeddings(doc_id: str) -> bool:
+    """Check if a document has embeddings stored."""
+    path = INDEXES_DIR / f"{doc_id}.json"
+    if not path.exists():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        emb = data.get("embeddings", {})
+        return bool(emb)
+    except Exception:
+        return False
+
+
 def load_tree(doc_id: str) -> dict | None:
-    """Load a single tree by doc_id."""
+    """Load a single tree by doc_id (includes embeddings if present)."""
     path = INDEXES_DIR / f"{doc_id}.json"
     if not path.exists():
         return None
@@ -58,12 +130,14 @@ def list_trees() -> list[dict]:
             doc_desc = tree.get("doc_description", "")
             structure = tree.get("structure", [])
             node_count = _count_nodes(structure)
+            has_emb = bool(data.get("embeddings"))
             results.append({
                 "doc_id": data.get("doc_id", path.stem),
                 "source_file": data.get("source_file", ""),
                 "doc_name": doc_name,
                 "doc_description": doc_desc,
                 "node_count": node_count,
+                "has_embeddings": has_emb,
             })
         except Exception:
             continue
@@ -80,7 +154,7 @@ def delete_tree(doc_id: str) -> bool:
 
 
 def load_all_trees() -> list[dict]:
-    """Load all tree records (full data)."""
+    """Load all tree records (full data including embeddings)."""
     INDEXES_DIR.mkdir(parents=True, exist_ok=True)
     results = []
     for path in sorted(INDEXES_DIR.glob("*.json")):
