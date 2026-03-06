@@ -1,52 +1,35 @@
 [project]
-name = "pageindex-rag"
-version = "0.1.0"
-description = "PageIndex engine for vectorless structural indexing and reasoning-based retrieval"
-requires-python = ">=3.11"
-readme = "README.md"
-license = { file = "LICENSE" }
-keywords = ["pageindex", "rag", "sec-filings", "structural-indexing", "vectorless-rag", "mcp"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries",
-]
+name = "sec-rag"
+version = "1.0.0"
+description = "PageIndex RAG engine for SEC EDGAR filings and long documents"
+requires-python = ">=3.13"
 dependencies = [
-    "openai",
-    "tiktoken",
-    "pymupdf",
-    "PyPDF2",
-    "pyyaml",
-    "python-dotenv",
-    "mcp[cli]",
-    "rich",
-    "pypdf",
-    "beautifulsoup4",
-    "lxml",
-    "pandas",
-    "openpyxl",
+    "mcp>=1.20.0",
+    "openai>=1.0.0",
+    "tiktoken>=0.5.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
+    "pymupdf>=1.24.0",
+    "PyPDF2>=3.0.0",
+    "pypdf>=4.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "urllib3>=2.0.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "uvicorn>=0.30.0",
 ]
-
-[project.scripts]
-rag-server = "src.server:main"
-ingest = "src.ingest:main"
-manage-docs = "src.manage_docs:main"
-pageindex-rag = "src.cli:main"
-fetch-sec = "src.fetch_sec:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.urls]
-Homepage = "https://github.com/jingerzz/page-index-rag"
-Repository = "https://github.com/jingerzz/page-index-rag"
-Issues = "https://github.com/jingerzz/page-index-rag/issues"
+[tool.hatch.build.targets.wheel]
+packages = ["src/pageindex_rag"]
+
+[project.scripts]
+rag-server = "pageindex_rag.server:main"
+fetch-sec = "pageindex_rag.fetch_sec:main"
+ingest = "pageindex_rag.ingest:main"
+manage-docs = "pageindex_rag.manage_docs:main"

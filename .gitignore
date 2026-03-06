@@ -1,32 +1,14 @@
-# API key and secrets — never commit
-config.json
-.env
-.env.*
-!.env.example
-
-# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.venv/
-venv/
-env/
-
-# Build / install
 *.egg-info/
 dist/
 build/
-
-# IDE / OS
-.idea/
-.vscode/
-*.swp
+.venv/
+.env
+data/drop/*
+data/processed/*
+data/indexes/*
+!data/drop/.gitkeep
+!data/processed/.gitkeep
+!data/indexes/.gitkeep
 .DS_Store
-
-# Project-specific
-logs/
-*.log
-data/drop/*.pdf
-data/drop/*.xlsx
-data/drop/*.xls

@@ -1,0 +1,94 @@
+--- a/src/server.py
++++ b/src/server.py
+@@ -17,6 +17,11 @@ from . import tree_store, tree_search, indexer, llm
+ from .parsers import PARSERS
+ from . import sec_fetcher
+ 
++# Import enhanced SEC fetcher tools (adds pagination and rate limit protection)
++from . import enhanced_sec_fetcher
++from .enhanced_sec_fetcher import check_filings_available, fetch_company_filings_enhanced
++
+ # All logging to stderr (stdout is MCP protocol channel)
+ logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+ logger = logging.getLogger("pageindex-rag")
+@@ -536,6 +541,109 @@ def fetch_company_filings(
+     return "\n".join(lines)
+ 
+ 
++@mcp.tool()
++def check_filings_available(ticker: str, forms: str = "") -> str:
++    """Check available SEC filings WITHOUT downloading.
++    
++    This enhanced check shows you:
++    - Total filings available on SEC EDGAR for this ticker
++    - How many are already indexed locally
++    - How many are new (available but not indexed)
++    - Breakdown by form type
++    
++    USE THIS FIRST before fetching to understand what you're working with.
++    This is the enhanced version of check_company_indexed().
++    
++    Args:
++        ticker: Company ticker symbol (e.g., "AAPL", "CRWV")
++        forms: Optional comma-separated form filter (e.g., "10-K,10-Q")
++               Leave blank to see all form types.
++    
++    Returns:
++        Summary of available vs indexed filings with form breakdown.
++        
++    Example:
++        check_filings_available("CRWV")
++        # Shows: 144 total available, 15 indexed, 129 new to fetch
++    """
++    return enhanced_sec_fetcher.check_filings_available(ticker, forms)
++
++
++@mcp.tool()
++def fetch_company_filings_enhanced(
++    ticker: str,
++    forms: str = "",
++    batch_size: int = 10,
++    auto_index: bool = True
++) -> str:
++    """Fetch SEC filings with pagination and smart rate limit handling.
++    
++    This enhanced fetcher addresses the limitations of the standard
++    fetch_company_filings tool:
++    
++    1. **Pre-flight check**: Shows total available before downloading
++    2. **Paginated fetching**: Downloads in small batches (default 10) to avoid rate limits
++    3. **Resume support**: If rate limited, tells you exactly when you can resume
++    4. **Progress tracking**: Shows batch progress (e.g., "Batch 3/15")
++    5. **Smart deduplication**: Automatically skips already-indexed filings
++    
++    RECOMMENDED WORKFLOW:
++        1. check_filings_available("CRWV")  # See what's available
++        2. fetch_company_filings_enhanced("CRWV", batch_size=10)  # Fetch in batches
++        3. If rate limited, wait the specified time and re-run (auto-resumes)
++    
++    Args:
++        ticker: Company ticker symbol
++        forms: Comma-separated form types (e.g., "10-K,10-Q,8-K")
++               Leave blank for all forms.
++        batch_size: Number of filings per batch (default 10). 
++                    Lower = safer for rate limits. Max 20.
++        auto_index: Automatically index downloaded filings (default True)
++    
++    Returns:
++        Progress report with downloaded files and resume info if rate limited.
++        
++    Example:
++        fetch_company_filings_enhanced("CRWV", batch_size=5)
++        # Returns complete summary with all downloaded files
++    """
++    return enhanced_sec_fetcher.fetch_company_filings_enhanced(
++        ticker=ticker,
++        forms=forms,
++        batch_size=batch_size,
++        auto_index=auto_index
++    )
++
++
+ @mcp.tool()
+ def ingest_drop_folder() -> str:
+     """Process and index any supported files in the data/drop/ folder.
